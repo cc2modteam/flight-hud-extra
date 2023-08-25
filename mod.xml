@@ -1,3 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<data name="Aircraft MFD + UI" author="Bredroll" description="Add a moving map display to your Petrel + UI">
+<data name="Aircraft MFD" author="Bredroll" description="
+
+Add more in-flight information including navigation waypoints
+and Petrel cargo details.
+
+Show course to steer and distance for next waypoint and show Petrel
+airlift/drop bearing and distances.
+
+Now 100% Compatible with UI Enhancer mods!
+">
 </data>
