@@ -54,8 +54,28 @@ color_green = color8(0, 255, 0, mfd_text_alpha)
 color_green_hud = color8(0, 255, 0, 128)
 color_red = color8(255, 0, 0, mfd_text_alpha)
 color_yellow = color8(255, 255, 0, mfd_text_alpha)
-color_warn = color8(255, 0, 255, mfd_text_alpha)
+color_warn = color8(255, 0, 0, mfd_text_alpha)
 
+g_dest_ranges = {}
+g_dest_range_samples = 12
+
+function update_dest_range(distance, ticks)
+    local sample = {d=distance, t=ticks}
+    table.insert(g_dest_ranges, sample)
+    if #g_dest_ranges > g_dest_range_samples then
+        table.remove(g_dest_ranges, 1)
+    end
+    if #g_dest_ranges == g_dest_range_samples then
+        local tick_time = 0
+        -- get time spent
+        for i = 1, #g_dest_ranges do
+            tick_time = tick_time + g_dest_ranges[i].t
+        end
+        return g_dest_ranges[1].d, tick_time
+    end
+
+    return 0, 0
+end
 
 function putxy(x, y, txt, color)
     update_ui_text(x, y, txt, 255, 1, color, 0)
@@ -68,10 +88,6 @@ end
 
 function get_vehicle_weapon(vehicle)
     local attachment_count = vehicle:get_attachment_count()
-
-    local has_missiles = false
-    local has_ciws = false
-    local has_cannon = false
 
     for i = 0, attachment_count - 1 do
         local attachment = vehicle:get_attachment(i)
@@ -106,11 +122,13 @@ function get_vehicle_weapon(vehicle)
     return ""
 end
 
-function aircraft_display_navigation_bar(vehicle)
+function aircraft_display_navigation_bar(vehicle, ticks)
     local waypoint_count = vehicle:get_waypoint_count()
     puts(0, "nav", color_green)
 
-    if waypoint_count > 0 then
+    if waypoint_count == 0 then
+        g_dest_ranges = {}
+    else
         puts(0, string.format("%d wpts", waypoint_count), color_green)
         -- next wpt dist if not a loop
         local has_repeat = false
@@ -125,6 +143,7 @@ function aircraft_display_navigation_bar(vehicle)
 
         if has_repeat then
             puts(0, "racetrack", color_green)
+            g_last_dist = 0
         else
             local child_vehicle_id = vehicle:get_attached_vehicle_id(0)
             local vpos = vehicle:get_position_xz()
@@ -138,19 +157,6 @@ function aircraft_display_navigation_bar(vehicle)
             end
             local angle = math.atan(waypoint_pos:x() - vpos:x(), waypoint_pos:y() - vpos:y())
             local bearing = math.floor((angle / math.pi * 180)) % 360
-
-            local is_group_a = waypoint:get_is_wait_group(0)
-            local is_group_b = waypoint:get_is_wait_group(1)
-            local is_group_c = waypoint:get_is_wait_group(2)
-            local is_group_d = waypoint:get_is_wait_group(3)
-            if is_group_a or is_group_b or is_group_c or is_group_d then
-                local group_text = ""
-                if is_group_a then group_text = group_text..update_get_loc(e_loc.upp_acronym_alpha) end
-                if is_group_b then group_text = group_text..update_get_loc(e_loc.upp_acronym_beta) end
-                if is_group_c then group_text = group_text..update_get_loc(e_loc.upp_acronym_charlie) end
-                if is_group_d then group_text = group_text..update_get_loc(e_loc.upp_acronym_delta) end
-                puts(0, "HOLD "..group_text, color_red)
-            end
 
             local waypoint_type = waypoint:get_type()
             if waypoint_type == e_waypoint_type.deploy then
@@ -171,7 +177,7 @@ function aircraft_display_navigation_bar(vehicle)
             if attack_target_type ~= e_attack_type.none then
                 local attack_target_pos = vehicle:get_attack_target_position_xz()
                 local attack_target_attack_type = vehicle:get_attack_target_type()
-                dist = math.floor(vec2_dist(vpos, attack_target_pos))
+                dist = vec2_dist(vpos, attack_target_pos)
                 local target_angle = math.atan(attack_target_pos:x() - vpos:x(), attack_target_pos:y() - vpos:y())
                 bearing = math.floor((target_angle / math.pi * 180)) % 360
 
@@ -181,12 +187,12 @@ function aircraft_display_navigation_bar(vehicle)
                     if dist < 10 then
                         bra_color = color_yellow
                     end
-                    puts(0, string.format("LIFT", dist), bra_color)
+                    puts(0, string.format("LIFT", math.floor(dist)), bra_color)
                 else
                     -- attack
                     if dist > 0 then
                         bra_color = color_red
-                        puts(0, string.format("TGT", dist), color_red)
+                        puts(0, string.format("TGT", math.floor(dist)), color_red)
                     end
                 end
 
@@ -204,17 +210,57 @@ function aircraft_display_navigation_bar(vehicle)
                 end
             end
             if abs_diff < 170 then
-                putxy(math.floor(diff / 3), 9, "^", bra_color)
+                putxy(math.floor(diff / 3), 9, "v", bra_color)
             end
             putxy(1, 36, string.format("%03d", bearing), bra_color)
-            puts(0, string.format("%5dm", dist), bra_color)
+
+            -- calc ETA
+            local eta = ""
+            local first_range, tick_range = update_dest_range(dist, ticks)
+            local moved = first_range - dist
+
+            if dist > 500 then
+                local spd = (moved / tick_range) * 33  -- m/sec
+                if spd > 1 then
+                    local eta_secs = math.floor(dist / spd)
+                    if eta_secs > 100 then
+                        local eta_mins = math.floor(eta_secs / 60)
+                        eta = string.format("ETA %d min", eta_mins)
+                    else
+                        eta = string.format("ETA %d sec", eta_secs)
+                    end
+
+                end
+            end
+
+            if dist > 8000 then
+                puts(0, string.format("%3dkm %s", math.floor(dist/1000), eta), bra_color)
+            elseif dist > 2000 then
+                puts(0, string.format("%1.1fkm %s", dist/1000, eta), bra_color)
+            else
+                puts(0, string.format("%4dm %s", math.floor(dist), eta), bra_color)
+            end
+
+            local is_group_a = waypoint:get_is_wait_group(0)
+            local is_group_b = waypoint:get_is_wait_group(1)
+            local is_group_c = waypoint:get_is_wait_group(2)
+            local is_group_d = waypoint:get_is_wait_group(3)
+            if is_group_a or is_group_b or is_group_c or is_group_d then
+                local group_text = ""
+                if is_group_a then group_text = group_text..update_get_loc(e_loc.upp_acronym_alpha) end
+                if is_group_b then group_text = group_text..update_get_loc(e_loc.upp_acronym_beta) end
+                if is_group_c then group_text = group_text..update_get_loc(e_loc.upp_acronym_charlie) end
+                if is_group_d then group_text = group_text..update_get_loc(e_loc.upp_acronym_delta) end
+                puts(0, "HOLD "..group_text, color_red)
+            end
+
         end
     end
 end
 
 function aircraft_display_warning_box(vehicle)
     if vehicle:get_is_visible_by_enemy() then
-        if g_blink_timer > 15 then
+        if g_blink_timer % 2 == 0 then
             puts(0, "WARN!", color_warn)
         end
     end
@@ -248,7 +294,7 @@ function update_aircraft_attached(vehicle, screen_w, screen_h, ticks)
             --  64 = type 5
 
             if screen_w == 256 then
-                aircraft_display_navigation_bar(vehicle)
+                aircraft_display_navigation_bar(vehicle, ticks)
             end
 
             if screen_w == 64 then

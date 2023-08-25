@@ -121,7 +121,7 @@
 		<screen name="mfd1"
 				display_name_loc="516"
 				type="0"
-				refresh_interval="2"
+				refresh_interval="30"
 				script_file_name="scripts/screen_self_destruct.lua"
 				body_index="0" seat_index="4294967295" controls="Q: Exit">
 			<transform m00="1" m01="0" m02="0"
@@ -134,7 +134,7 @@
 		<screen name="mfd2"
 				display_name_loc="516"
 				type="5"
-				refresh_interval="2"
+				refresh_interval="30"
 				script_file_name="scripts/screen_self_destruct.lua"
 				body_index="0" seat_index="4294967295" controls="Q: Exit">
 			<transform m00="1" m01="0" m02="0"
@@ -147,7 +147,7 @@
 		<screen name="mfd3"
 				display_name_loc="516"
 				type="4"
-				refresh_interval="2"
+				refresh_interval="3"
 				script_file_name="scripts/screen_self_destruct.lua"
 				body_index="0" seat_index="4294967295" controls="Q: Exit">
 			<transform m00="1" m01="0" m02="0"
