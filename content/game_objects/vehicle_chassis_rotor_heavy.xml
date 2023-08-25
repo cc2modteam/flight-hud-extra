@@ -117,13 +117,38 @@
 		</wheel>
 	</wheels>
 	<screens>
-		<screen name="right_mfd" display_name_loc="516"
-				script_file_name="scripts/screen_vehicle_control.lua"
-				body_index="0" seat_index="4294967295" controls="Q: Exit" type="3">
+		<screen name="mfd1"
+				display_name_loc="516"
+				type="0"
+				refresh_interval="2"
+				script_file_name="scripts/screen_self_destruct.lua"
+				body_index="0" seat_index="4294967295" controls="Q: Exit">
 			<transform m00="0.971" m01="0.182" m02="-0.554"
 					   m10="-0.182" m11="0.149" m12="-0.971"
 					   m20="-0.154" m21="0.971" m22="0.178"
 					   tx="1.16000000e+00" ty="-4.95605644e-01" tz="3.90634933e+00"/>
+		</screen>
+		<screen name="mfd2"
+				display_name_loc="516"
+				type="5"
+				refresh_interval="2"
+				script_file_name="scripts/screen_self_destruct.lua"
+				body_index="0" seat_index="4294967295" controls="Q: Exit">
+			<transform m00="0.971" m01="0.182" m02="-0.554"
+					   m10="-0.182" m11="0.149" m12="-0.971"
+					   m20="-0.154" m21="0.971" m22="0.178"
+					   tx="1.4000000" ty="-0.295605644" tz="3.90634933e+00"/>
+		</screen>
+		<screen name="mfd3"
+				display_name_loc="516"
+				type="4"
+				refresh_interval="2"
+				script_file_name="scripts/screen_self_destruct.lua"
+				body_index="0" seat_index="4294967295" controls="Q: Exit">
+			<transform m00="1" m01="0" m02="0"
+					   m10="0" m11="0" m12="-1"
+					   m20="0" m21="1" m22="0"
+					   tx="0.00000000e+00" ty="0" tz="3.1"/>
 		</screen>
 	</screens>
 	<attachments>
