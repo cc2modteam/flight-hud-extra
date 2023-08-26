@@ -280,7 +280,7 @@ function aircraft_display_info(vehicle)
                 puts(0, get_vehicle_weapon(child), color_green)
             end
         end
-    elseif vdef == e_game_object_type.chassis_air_rotor_small then
+    elseif vdef == e_game_object_type.chassis_air_rotor_light then
         update_set_screen_background_type(9)
 
         update_set_screen_camera_attach_vehicle(vehicle:get_id(), 0)
