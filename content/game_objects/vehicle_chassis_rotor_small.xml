@@ -159,7 +159,7 @@
 	<indicators/>
 	<achievements/>
 	<dials/>
-		<screens>
+	<screens>
 		<!-- square -->
 		<screen name="mfd1"
 				display_name_loc="516"

@@ -280,15 +280,15 @@ function aircraft_display_info(vehicle)
                 puts(0, get_vehicle_weapon(child), color_green)
             end
         end
-    else
-        -- other aircraft
-        -- render cctv
+    elseif vdef == e_game_object_type.chassis_air_rotor_small then
         update_set_screen_background_type(9)
+
         update_set_screen_camera_attach_vehicle(vehicle:get_id(), 0)
+        update_set_screen_camera_render_attached_vehicle(false)
         update_set_screen_camera_cull_distance(5000)
+
         update_set_screen_camera_lod_level(0)
         update_set_screen_camera_is_render_map_vehicles(true)
-        update_set_screen_camera_render_attached_vehicle(false)
         update_set_screen_camera_is_render_ocean(true)
     end
 end
