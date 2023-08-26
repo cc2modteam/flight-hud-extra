@@ -267,16 +267,29 @@ function aircraft_display_warning_box(vehicle)
 end
 
 function aircraft_display_info(vehicle)
-    local child_vehicle_id = vehicle:get_attached_vehicle_id(0)
-    if child_vehicle_id >= 0 then
-        local child = update_get_map_vehicle_by_id(child_vehicle_id)
-        if child:get() then
-            puts(0, "cargo:", color_green)
-            local vehicle_definition_index = child:get_definition_index()
-            local vehicle_definition_name, vehicle_definition_region = get_chassis_data_by_definition_index(vehicle_definition_index)
-            puts(0, string.format("%s ID%d", vehicle_definition_name, child_vehicle_id), color_green)
-            puts(0, get_vehicle_weapon(child), color_green)
+    local vdef = vehicle:get_definition_index()
+    if vdef == e_game_object_type.chassis_air_rotor_heavy then
+        local child_vehicle_id = vehicle:get_attached_vehicle_id(0)
+        if child_vehicle_id >= 0 then
+            local child = update_get_map_vehicle_by_id(child_vehicle_id)
+            if child:get() then
+                puts(0, "cargo:", color_green)
+                local vehicle_definition_index = child:get_definition_index()
+                local vehicle_definition_name, vehicle_definition_region = get_chassis_data_by_definition_index(vehicle_definition_index)
+                puts(0, string.format("%s ID%d", vehicle_definition_name, child_vehicle_id), color_green)
+                puts(0, get_vehicle_weapon(child), color_green)
+            end
         end
+    else
+        -- other aircraft
+        -- render cctv
+        update_set_screen_background_type(9)
+        update_set_screen_camera_attach_vehicle(vehicle:get_id(), 0)
+        update_set_screen_camera_cull_distance(5000)
+        update_set_screen_camera_lod_level(0)
+        update_set_screen_camera_is_render_map_vehicles(true)
+        update_set_screen_camera_render_attached_vehicle(false)
+        update_set_screen_camera_is_render_ocean(true)
     end
 end
 
