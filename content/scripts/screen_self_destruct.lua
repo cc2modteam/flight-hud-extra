@@ -1,4 +1,5 @@
 g_blink_timer = 0
+g_self_has_radar = nil
 
 function begin()
     begin_load()
@@ -84,6 +85,26 @@ end
 function puts(col, txt, color)
     update_ui_text(9 + 8 * col, mfd_text_line, txt, 255, 0, color, 0)
     mfd_text_line = mfd_text_line + 11
+end
+
+function get_has_radar(vehicle)
+    local attachment_count = vehicle:get_attachment_count()
+
+    for i = 0, attachment_count - 1 do
+        local attachment = vehicle:get_attachment(i)
+
+        if attachment:get() then
+            local attachment_def = attachment:get_definition_index()
+            if attachment_def == e_game_object_type.attachment_radar_awacs then
+                return true
+            elseif attachment_def == e_game_object_type.attachment_radar_golfball then
+                return true
+            elseif attachment_def == e_game_object_type.attachment_turret_carrier_missile then
+                return true
+            end
+        end
+    end
+    return false
 end
 
 function get_vehicle_weapon(vehicle)
@@ -330,6 +351,12 @@ function render_circle(x, y, radius, col)
     end
 end
 
+function rotate_xy(x, y, a)
+    local s = math.sin(a)
+    local c = math.cos(a)
+    return x * c - y * s, x * s + y * c
+end
+
 function render_box(x, y, w, col)
     local left = x - math.floor(w / 2)
     local right = left + w
@@ -371,7 +398,12 @@ function aircraft_display_info_radar(current_vehicle, screen_w, screen_h)
 
     local current_pos = current_vehicle:get_position_xz()
     local current_team = current_vehicle:get_team()
+    local current_hdg = current_vehicle:get_direction()
+    local self_hdg_rad = math.atan(current_hdg:x(), current_hdg:y())
+
+
     local vehicle_count = update_get_map_vehicle_count()
+
     for i = 0, vehicle_count - 1, 1 do
         local vehicle = update_get_map_vehicle_by_index(i)
         if vehicle:get() then
@@ -399,6 +431,15 @@ function aircraft_display_info_radar(current_vehicle, screen_w, screen_h)
                         end
                         if render_vehicle then
                             local screen_pos_x, screen_pos_y = get_screen_from_world(vehicle_pos_xz:x(), vehicle_pos_xz:y(), current_pos:x(), current_pos:y(), 2 * radar_range, screen_w, screen_h)
+
+                            if g_self_has_radar then
+                                -- show vectors
+                                local vehicle_dir = vehicle:get_direction()
+                                local xm = screen_pos_x + vehicle_dir:x() * 8
+                                local ym = screen_pos_y + vehicle_dir:y() * -8
+                                update_ui_line(screen_pos_x, screen_pos_y, xm, ym, vehicle_color)
+                            end
+
                             render_box(screen_pos_x, screen_pos_y, size, vehicle_color)
                         end
                     end
@@ -428,6 +469,10 @@ function update_aircraft_attached(vehicle, screen_w, screen_h, ticks)
 
         local vdef = vehicle:get_definition_index()
         if get_is_vehicle_air(vdef) then
+            if g_self_has_radar == nil then
+                g_self_has_radar = get_has_radar(vehicle)
+            end
+
             update_set_screen_background_type(0)
             -- render aircraft displays
             -- 128 = type 0
