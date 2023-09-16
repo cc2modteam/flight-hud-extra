@@ -122,6 +122,31 @@ function get_vehicle_weapon(vehicle)
     return ""
 end
 
+function eta_distance_to_text(dist, eta)
+    if dist > 8000 then
+        return string.format("%3dkm %s", math.floor(dist/1000), eta)
+    elseif dist > 2000 then
+        return string.format("%1.1fkm %s", dist/1000, eta)
+    end
+    return string.format("%4dm %s", math.floor(dist), eta)
+end
+
+function get_eta_text(dist, spd)
+    local eta = ""
+    if dist > 500 then
+        if spd > 1 then
+            local eta_secs = math.floor(dist / spd)
+            if eta_secs > 100 then
+                local eta_mins = math.floor(eta_secs / 60)
+                eta = string.format("ETA %d min", eta_mins)
+            else
+                eta = string.format("ETA %d sec", eta_secs)
+            end
+        end
+    end
+    return eta
+end
+
 function aircraft_display_navigation_bar(vehicle, ticks)
     local waypoint_count = vehicle:get_waypoint_count()
     puts(0, "nav", color_green)
@@ -129,17 +154,25 @@ function aircraft_display_navigation_bar(vehicle, ticks)
     if waypoint_count == 0 then
         g_dest_ranges = {}
     else
-        puts(0, string.format("%d wpts", waypoint_count), color_green)
+        local total_wpt_dist = 0.0
+
         -- next wpt dist if not a loop
         local has_repeat = false
-
-
+        local prev_pos = nil
         for j = 0, waypoint_count - 1, 1 do
             local waypoint = vehicle:get_waypoint(j)
             if waypoint:get_repeat_index() >= 0 then
                 has_repeat = true
+            else
+                if j > 0 then
+                    local next_pos = waypoint:get_position_xz()
+                    local next_dist = math.floor(vec2_dist(next_pos, prev_pos))
+                    total_wpt_dist = total_wpt_dist + next_dist
+                end
+                prev_pos = waypoint:get_position_xz()
             end
         end
+        puts(0, string.format("%d wpts", waypoint_count), color_green)
 
         if has_repeat then
             puts(0, "racetrack", color_green)
@@ -173,7 +206,6 @@ function aircraft_display_navigation_bar(vehicle, ticks)
 
             local attack_target_type = vehicle:get_attack_target_type()
 
-
             if attack_target_type ~= e_attack_type.none then
                 local attack_target_pos = vehicle:get_attack_target_position_xz()
                 local attack_target_attack_type = vehicle:get_attack_target_type()
@@ -195,9 +227,7 @@ function aircraft_display_navigation_bar(vehicle, ticks)
                         puts(0, string.format("TGT", math.floor(dist)), color_red)
                     end
                 end
-
             end
-
 
             local hdg = math.floor((vehicle:get_rotation_y() * 360 / (math.pi * 2) % 360))
             local diff = math.floor(bearing - hdg)
@@ -218,28 +248,13 @@ function aircraft_display_navigation_bar(vehicle, ticks)
             local eta = ""
             local first_range, tick_range = update_dest_range(dist, ticks)
             local moved = first_range - dist
+            local spd = (moved / tick_range) * 33  -- m/sec
 
             if dist > 500 then
-                local spd = (moved / tick_range) * 33  -- m/sec
-                if spd > 1 then
-                    local eta_secs = math.floor(dist / spd)
-                    if eta_secs > 100 then
-                        local eta_mins = math.floor(eta_secs / 60)
-                        eta = string.format("ETA %d min", eta_mins)
-                    else
-                        eta = string.format("ETA %d sec", eta_secs)
-                    end
-
-                end
+                eta = get_eta_text(dist, spd)
             end
 
-            if dist > 8000 then
-                puts(0, string.format("%3dkm %s", math.floor(dist/1000), eta), bra_color)
-            elseif dist > 2000 then
-                puts(0, string.format("%1.1fkm %s", dist/1000, eta), bra_color)
-            else
-                puts(0, string.format("%4dm %s", math.floor(dist), eta), bra_color)
-            end
+            puts(0, eta_distance_to_text(dist, eta), bra_color)
 
             local is_group_a = waypoint:get_is_wait_group(0)
             local is_group_b = waypoint:get_is_wait_group(1)
@@ -254,6 +269,12 @@ function aircraft_display_navigation_bar(vehicle, ticks)
                 puts(0, "HOLD "..group_text, color_red)
             end
 
+            if total_wpt_dist > 0 then
+                local all_dist = total_wpt_dist + dist
+                local all_eta = get_eta_text(all_dist, spd)
+                puts(0, eta_distance_to_text(all_dist, all_eta), bra_color)
+            end
+
         end
     end
 end
@@ -266,30 +287,116 @@ function aircraft_display_warning_box(vehicle)
     end
 end
 
-function aircraft_display_info(vehicle)
-    local vdef = vehicle:get_definition_index()
-    if vdef == e_game_object_type.chassis_air_rotor_heavy then
-        local child_vehicle_id = vehicle:get_attached_vehicle_id(0)
-        if child_vehicle_id >= 0 then
-            local child = update_get_map_vehicle_by_id(child_vehicle_id)
-            if child:get() then
-                puts(0, "cargo:", color_green)
-                local vehicle_definition_index = child:get_definition_index()
-                local vehicle_definition_name, vehicle_definition_region = get_chassis_data_by_definition_index(vehicle_definition_index)
-                puts(0, string.format("%s ID%d", vehicle_definition_name, child_vehicle_id), color_green)
-                puts(0, get_vehicle_weapon(child), color_green)
+function aircraft_display_info_petrel(vehicle)
+    local child_vehicle_id = vehicle:get_attached_vehicle_id(0)
+    if child_vehicle_id >= 0 then
+        local child = update_get_map_vehicle_by_id(child_vehicle_id)
+        if child:get() then
+            puts(0, "cargo:", color_green)
+            local vehicle_definition_index = child:get_definition_index()
+            local vehicle_definition_name, vehicle_definition_region = get_chassis_data_by_definition_index(vehicle_definition_index)
+            puts(0, string.format("%s ID%d", vehicle_definition_name, child_vehicle_id), color_green)
+            puts(0, get_vehicle_weapon(child), color_green)
+        end
+    end
+end
+
+function aircraft_display_info_razorbill(vehicle)
+    update_set_screen_background_type(9)
+
+    update_set_screen_camera_attach_vehicle(vehicle:get_id(), 0)
+    update_set_screen_camera_render_attached_vehicle(false)
+    update_set_screen_camera_cull_distance(5000)
+
+    update_set_screen_camera_lod_level(0)
+    update_set_screen_camera_is_render_map_vehicles(true)
+    update_set_screen_camera_is_render_ocean(true)
+end
+
+function render_circle(x, y, radius, col)
+    local steps = math.max(math.floor(radius), 8)
+    local step = math.pi * 2 / steps
+
+    for i = 0, steps - 1 do
+        local angle = i * step
+        local angle_next = angle + step
+        update_ui_line(
+            math.ceil(x + math.cos(angle) * radius),
+            math.ceil(y + math.sin(angle) * radius),
+            math.ceil(x + math.cos(angle_next) * radius),
+            math.ceil(y + math.sin(angle_next) * radius),
+            col
+        )
+    end
+end
+
+function aircraft_display_info_radar(current_vehicle, screen_w, screen_h)
+    -- chop off 20px from right and bottom
+    local color_radar_ring = color8(0, 100, 0, 32)
+    update_ui_push_offset(6, 6)
+
+    screen_h = 63
+    screen_w = screen_h
+
+    -- find every friendly air unit within 10km
+    -- find every visible hostile air unit within 10km
+    if not current_vehicle:get() then
+        return
+    end
+    local radar_range = 10000
+    render_circle(
+            screen_w/2, screen_h/2, screen_w/2, color_radar_ring
+    )
+    render_circle(
+            screen_w/2, screen_h/2, screen_w/4, color_radar_ring
+    )
+
+    local current_pos = current_vehicle:get_position_xz()
+    local current_team = current_vehicle:get_team()
+    local vehicle_count = update_get_map_vehicle_count()
+    for i = 0, vehicle_count - 1, 1 do
+        local vehicle = update_get_map_vehicle_by_index(i)
+        if vehicle:get() then
+            local vehicle_definition_index = vehicle:get_definition_index()
+            if vehicle_definition_index ~= e_game_object_type.chassis_spaceship and vehicle_definition_index ~= e_game_object_type.drydock then
+                local vehicle_team = vehicle:get_team()
+                local vehicle_attached_parent_id = vehicle:get_attached_parent_id()
+                local vehicle_color = color_green
+                if vehicle_team ~= current_team then
+                    vehicle_color = color_red
+                end
+
+                if vehicle_attached_parent_id == 0 and vehicle:get_is_visible() and vehicle:get_is_observation_revealed() then
+                    local vehicle_pos_xz = vehicle:get_position_xz()
+                    local dist = vec2_dist(vehicle_pos_xz, current_pos)
+                    if dist < radar_range then
+                        local render_vehicle = false
+                        if get_is_vehicle_air(vehicle_definition_index) then
+                            render_vehicle = true
+                        elseif vehicle_definition_index == e_game_object_type.chassis_carrier then
+                            render_vehicle = true
+                        end
+                        if render_vehicle then
+                            local screen_pos_x, screen_pos_y = get_screen_from_world(vehicle_pos_xz:x(), vehicle_pos_xz:y(), current_pos:x(), current_pos:y(), radar_range, screen_w, screen_h)
+                            update_ui_rectangle(screen_pos_x, screen_pos_y, 1, 1, vehicle_color)
+                        end
+                    end
+                end
             end
         end
+    end
+    update_ui_pop_offset()
+end
+
+-- square display
+function aircraft_display_info(vehicle, screen_w, screen_h)
+    local vdef = vehicle:get_definition_index()
+    if vdef == e_game_object_type.chassis_air_rotor_heavy then
+        aircraft_display_info_petrel(vehicle)
     elseif vdef == e_game_object_type.chassis_air_rotor_light then
-        update_set_screen_background_type(9)
-
-        update_set_screen_camera_attach_vehicle(vehicle:get_id(), 0)
-        update_set_screen_camera_render_attached_vehicle(false)
-        update_set_screen_camera_cull_distance(5000)
-
-        update_set_screen_camera_lod_level(0)
-        update_set_screen_camera_is_render_map_vehicles(true)
-        update_set_screen_camera_is_render_ocean(true)
+        aircraft_display_info_razorbill(vehicle)
+    else
+        aircraft_display_info_radar(vehicle, screen_w, screen_h)
     end
 end
 
@@ -315,7 +422,7 @@ function update_aircraft_attached(vehicle, screen_w, screen_h, ticks)
             end
 
             if screen_w == 128 then
-                aircraft_display_info(vehicle)
+                aircraft_display_info(vehicle, screen_w, screen_h)
             end
             return true
         end

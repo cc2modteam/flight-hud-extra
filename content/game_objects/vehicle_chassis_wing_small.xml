@@ -176,7 +176,6 @@
 	<dials/>
 	<screens>
 		<!-- square -->
-		<!-- cant think of anything, maybe radar for AWACS
 		<screen name="mfd1"
 				display_name_loc="516"
 				type="0"
@@ -188,7 +187,6 @@
 					   m20="0" m21="1" m22="0"
 					   tx="0.85" ty="-0.139" tz="4.664"/>
 		</screen>
-		-->
 
 		<!-- small rect -->
 		<screen name="mfd2"
