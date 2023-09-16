@@ -361,7 +361,7 @@ function aircraft_display_info_radar(current_vehicle, screen_w, screen_h)
     if not current_vehicle:get() then
         return
     end
-    local radar_range = 20000
+    local radar_range = 10000
     render_circle(
             screen_w/2, screen_h/2, screen_w/2, color_radar_ring
     )
@@ -398,7 +398,7 @@ function aircraft_display_info_radar(current_vehicle, screen_w, screen_h)
                             size = 4
                         end
                         if render_vehicle then
-                            local screen_pos_x, screen_pos_y = get_screen_from_world(vehicle_pos_xz:x(), vehicle_pos_xz:y(), current_pos:x(), current_pos:y(), radar_range, screen_w, screen_h)
+                            local screen_pos_x, screen_pos_y = get_screen_from_world(vehicle_pos_xz:x(), vehicle_pos_xz:y(), current_pos:x(), current_pos:y(), 2 * radar_range, screen_w, screen_h)
                             render_box(screen_pos_x, screen_pos_y, size, vehicle_color)
                         end
                     end
