@@ -330,6 +330,24 @@ function render_circle(x, y, radius, col)
     end
 end
 
+function render_box(x, y, w, col)
+    local left = x - math.floor(w / 2)
+    local right = left + w
+    local top = y - math.floor(w / 2)
+    local bot = top + w
+
+    update_ui_line(left, top, right, top, col)
+    update_ui_line(right, top + 1, right, bot, col)
+    update_ui_line(right, bot, left, bot, col)
+    update_ui_line(left, bot + 1, left, top, col)
+
+    -- diamond
+    --update_ui_line(left, y, x, top, col)
+    --update_ui_line(x, top, right, y, col)
+    --update_ui_line(right, y, x, bot, col)
+    --update_ui_line(x, bot, left, y, col)
+end
+
 function aircraft_display_info_radar(current_vehicle, screen_w, screen_h)
     -- chop off 20px from right and bottom
     local color_radar_ring = color8(0, 100, 0, 32)
@@ -343,7 +361,7 @@ function aircraft_display_info_radar(current_vehicle, screen_w, screen_h)
     if not current_vehicle:get() then
         return
     end
-    local radar_range = 10000
+    local radar_range = 20000
     render_circle(
             screen_w/2, screen_h/2, screen_w/2, color_radar_ring
     )
@@ -370,15 +388,18 @@ function aircraft_display_info_radar(current_vehicle, screen_w, screen_h)
                     local vehicle_pos_xz = vehicle:get_position_xz()
                     local dist = vec2_dist(vehicle_pos_xz, current_pos)
                     if dist < radar_range then
+                        local size = 0
                         local render_vehicle = false
                         if get_is_vehicle_air(vehicle_definition_index) then
                             render_vehicle = true
+                            size = 1
                         elseif vehicle_definition_index == e_game_object_type.chassis_carrier then
                             render_vehicle = true
+                            size = 4
                         end
                         if render_vehicle then
                             local screen_pos_x, screen_pos_y = get_screen_from_world(vehicle_pos_xz:x(), vehicle_pos_xz:y(), current_pos:x(), current_pos:y(), radar_range, screen_w, screen_h)
-                            update_ui_rectangle(screen_pos_x, screen_pos_y, 1, 1, vehicle_color)
+                            render_box(screen_pos_x, screen_pos_y, size, vehicle_color)
                         end
                     end
                 end
